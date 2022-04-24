@@ -1,0 +1,228 @@
+package main
+
+import (
+	"fmt"
+	"github.com/devfacet/gocmd/v3"
+	"gopkg.in/ini.v1"
+	"io/ioutil"
+	"log"
+	"math"
+	"net/http"
+	"net/url"
+	"opbd/gosu"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+)
+
+var client *gosu.GosuClient
+
+func CreateConfigurationFile(clientID uint, clientSecret string) {
+	fmt.Println("Creating configuration file in the root folder of the project.")
+	file, _ := os.Create("config.ini") // Creates or truncates the file
+	file.Close()
+
+	cfg, err := ini.Load("config.ini")
+	if err != nil {
+		fmt.Printf("Fail to read file: %v", err)
+		os.Exit(1)
+	}
+
+	cfg.NewSection("OSU_SECRETS")
+	cfg.Section("OSU_SECRETS").NewKey("CLIENT_ID", strconv.FormatUint(uint64(clientID), 10))
+	cfg.Section("OSU_SECRETS").NewKey("CLIENT_SECRET", clientSecret)
+
+	_ = cfg.SaveTo("config.ini")
+
+	fmt.Println("Successfully created the configuration file.")
+}
+
+func CreateNecessaryFolders(username string) {
+	if _, err := os.Stat("beatmaps"); os.IsNotExist(err) {
+		os.Mkdir("beatmaps", 0777)
+	}
+
+	if _, err := os.Stat("beatmaps/" + username); os.IsNotExist(err) {
+		os.Mkdir("beatmaps/"+username, 0777)
+	}
+}
+
+func GetSecretsFromConfig() (string, string) {
+	cfg, err := ini.Load("config.ini")
+	if err != nil {
+		fmt.Printf("Fail to read file: %v", err)
+		os.Exit(1)
+	}
+
+	return cfg.Section("OSU_SECRETS").Key("CLIENT_ID").String(),
+		cfg.Section("OSU_SECRETS").Key("CLIENT_SECRET").String()
+}
+
+func MapBoolsToBeatmapTypes(
+	mostPlayed bool,
+	favorite bool,
+	ranked bool,
+	loved bool,
+	pending bool,
+	graveyard bool,
+) []gosu.BeatmapType {
+	var beatmapTypesToGet []gosu.BeatmapType
+	if mostPlayed {
+		//beatmapTypesToGet = append(beatmapTypesToGet, gosu.MOST_PLAYED)
+		log.Fatalln("Most played maps are not implemented yet.")
+	}
+	if favorite {
+		beatmapTypesToGet = append(beatmapTypesToGet, gosu.FAVOURITE)
+	}
+	if ranked {
+		beatmapTypesToGet = append(beatmapTypesToGet, gosu.RANKED)
+	}
+	if loved {
+		beatmapTypesToGet = append(beatmapTypesToGet, gosu.LOVED)
+	}
+	if pending {
+		beatmapTypesToGet = append(beatmapTypesToGet, gosu.PENDING)
+	}
+	if graveyard {
+		beatmapTypesToGet = append(beatmapTypesToGet, gosu.GRAVEYARD)
+	}
+
+	return beatmapTypesToGet
+}
+
+func GetBeatMapIDsForType(
+	userID uint,
+	beatmapType gosu.BeatmapType,
+	mapCount int,
+) []int {
+	var beatmapIDs []int
+	forRange := int(math.Ceil(float64(mapCount) / 100))
+	offset := 0
+
+	for i := 0; i < forRange; i++ {
+		beatmapsets, _ := client.GetUserBeatmapsets(userID, beatmapType, map[string]interface{}{
+			"limit":  100,
+			"offset": offset,
+		})
+
+		for _, beatmapset := range beatmapsets {
+			beatmapIDs = append(beatmapIDs, beatmapset.ID)
+		}
+		offset += 100
+	}
+
+	return beatmapIDs
+}
+
+func GetBeatmapIDsForUser(user *gosu.UserCompact, beatmapTypes []gosu.BeatmapType, beatmapCounts map[gosu.BeatmapType]int) []int {
+	var beatmapIDs []int
+
+	for _, beatmapType := range beatmapTypes {
+		beatmapIDs = append(beatmapIDs, GetBeatMapIDsForType(uint(user.ID), beatmapType, beatmapCounts[beatmapType])...)
+	}
+
+	return beatmapIDs
+}
+
+func DownloadMaps(username string, ids []int) {
+	mapsDownloaded := 0
+	for _, id := range ids {
+		chimuURL := "https://api.chimu.moe/v1/download/" + strconv.FormatInt(int64(id), 10)
+		resp, err := http.Get(chimuURL)
+		if err != nil {
+			fmt.Printf("%d failed, please download manually.\n", id)
+		}
+
+		data, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Printf("Reading %d body failed, please download manually.\n", id)
+		}
+
+		r := regexp.MustCompile("[<>:\"/\\\\|?*]+")
+		dispositionHeader := resp.Header.Get("content-disposition")
+		fmt.Println(id)
+		fmt.Println(dispositionHeader)
+		rawFileName, _ := url.QueryUnescape(strings.Split(strings.Split(dispositionHeader, "filename=")[1], "\";")[0])
+		fileName := r.ReplaceAllString(rawFileName, "")
+		err = ioutil.WriteFile("beatmaps/"+username+"/"+fileName, data, 0777)
+		if err != nil {
+			fmt.Printf("%d failed, please download manually.\n", id)
+			log.Fatalln(err)
+			//continue
+		}
+		mapsDownloaded++
+		fmt.Printf("Downloaded %d (%d/%d)\n", id, mapsDownloaded, len(ids))
+	}
+	fmt.Printf("Download complete: Managed to download %d/%d maps.\n", mapsDownloaded, len(ids))
+}
+
+func main() {
+	flags := struct {
+		Help           bool `short:"h" long:"help" description:"Display usage" global:"true"`
+		GenerateConfig struct {
+			ClientID     uint   `short:"i" long:"client_id" required:"true" description:"Client ID for the osu! API."`
+			ClientSecret string `short:"s" long:"client_secret" required:"true" description:"Client secret for the osu! API."`
+		} `command:"generate_config" description:"Generate a configuration file for osu! API."`
+		Download struct {
+			User       uint `short:"u" long:"user" required:"true" description:"Numerical ID of the target user."`
+			MostPlayed bool `short:"m" long:"most_played" description:"Download user's most played beatmaps."`
+			Favorite   bool `short:"f" long:"favorite" description:"Download user's favorite beatmaps."`
+			Ranked     bool `short:"r" long:"ranked" description:"Download user's ranked beatmaps."`
+			Loved      bool `short:"l" long:"loved" description:"Download user's loved beatmaps."`
+			Pending    bool `short:"p" long:"pending" description:"Download user's pending beatmaps."`
+			Graveyard  bool `short:"g" long:"graveyard" description:"Download user's graveyard beatmaps."`
+		} `command:"download" description:"Download beatmaps from user's profile."`
+	}{}
+
+	gocmd.HandleFlag("GenerateConfig", func(cmd *gocmd.Cmd, args []string) error {
+		clientId := flags.GenerateConfig.ClientID
+		clientSecret := flags.GenerateConfig.ClientSecret
+		CreateConfigurationFile(clientId, clientSecret)
+		return nil
+	})
+
+	gocmd.HandleFlag("Download", func(cmd *gocmd.Cmd, args []string) error {
+		userID := flags.Download.User
+		//mostPlayed := flags.Download.MostPlayed
+		//favorite := flags.Download.Favorite
+		//ranked := flags.Download.Ranked
+		//loved := flags.Download.Loved
+		//pending := flags.Download.Pending
+		//graveyard := flags.Download.Graveyard
+
+		clientID, clientSecret := GetSecretsFromConfig()
+		client, _ = gosu.CreateGosuClient(clientSecret, clientID)
+
+		user, _ := client.GetUserCompact(userID)
+		CreateNecessaryFolders(user.Username)
+		beatmaps, _ := client.GetUserBeatmapsets(uint(user.ID), gosu.FAVOURITE,
+			map[string]interface{}{
+				"limit":  100,
+				"offset": 0,
+			})
+		fmt.Println(*beatmaps[0])
+
+		for _, elem := range beatmaps {
+			fmt.Println(elem.PlayCount)
+		}
+		//beatmapCountMap := map[gosu.BeatmapType]int{
+		//	gosu.FAVOURITE: user.FavoriteBeatmapsetCount,
+		//	gosu.RANKED:    user.RankedAndApprovedBeatmapsetCount,
+		//	gosu.LOVED:     user.LovedBeatmapsetCount,
+		//	gosu.PENDING:   user.PendingBeatmapsetCount,
+		//	gosu.GRAVEYARD: user.GraveyardBeatmapsetCount,
+		//}
+		//beatmapTypes := MapBoolsToBeatmapTypes(mostPlayed, favorite, ranked, loved, pending, graveyard)
+		//beatmapIDs := GetBeatmapIDsForUser(user, beatmapTypes, beatmapCountMap)
+		//DownloadMaps(user.Username, beatmapIDs)
+		return nil
+	})
+
+	gocmd.New(gocmd.Options{
+		Name:        "o!pbd",
+		Description: "osu! Profile Beatmap Downloader",
+		Flags:       &flags,
+		ConfigType:  gocmd.ConfigTypeAuto,
+	})
+}
