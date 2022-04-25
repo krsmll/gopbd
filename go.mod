@@ -1,4 +1,4 @@
-module gopbd
+module github.com/krsmll/gopbd
 
 go 1.18
 
