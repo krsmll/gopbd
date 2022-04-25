@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"time"
 )
 
 func CreateConfigurationFile(clientID uint, clientSecret string) {
@@ -86,6 +87,7 @@ func DownloadMaps(username string, beatmapsets []Beatmapset) {
 		}
 		mapsDownloaded++
 		fmt.Printf("Downloaded %d (%d/%d)\n", beatmapset.ID, mapsDownloaded, len(beatmapsets))
+		time.Sleep(300 * time.Millisecond) // chimu is rate limited so i guess it has to be slower...
 
 	}
 	fmt.Printf("Download complete: Managed to download %d/%d maps.\n", mapsDownloaded, len(beatmapsets))

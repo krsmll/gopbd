@@ -29,7 +29,7 @@ type BeatmapPlaycount struct {
 type User struct {
 	ID                       uint   `json:"id"`
 	Username                 string `json:"username"`
-	FavoriteBeatmapsetCount  uint   `json:"favorite_beatmapset_count"`
+	FavoriteBeatmapsetCount  uint   `json:"favourite_beatmapset_count"`
 	RankedBeatmapsetCount    uint   `json:"ranked_beatmapset_count"`
 	LovedBeatmapsetCount     uint   `json:"loved_beatmapset_count"`
 	PendingBeatmapsetCount   uint   `json:"pending_beatmapset_count"`
@@ -154,6 +154,19 @@ func (c *Client) GetUserBeatmapsets(userID uint, beatmapType string, params map[
 	return beatmapsets
 }
 
+func (c *Client) GetUserMostPlayedBeatmapsets(userID uint, params map[string]interface{}) []BeatmapPlaycount {
+	var beatmapsetPlaycounts []BeatmapPlaycount
+
+	url := "users/" + strconv.FormatUint(uint64(userID), 10) + "/beatmapsets/" + MOST_PLAYED
+	body := c.GetReq(url, params)
+	err := json.Unmarshal(body, &beatmapsetPlaycounts)
+	if err != nil {
+		log.Fatalf("Unable to unmarshal JSON array of beatmaps into []Beatmapset:\n%s", err)
+		return []BeatmapPlaycount{}
+	}
+	return beatmapsetPlaycounts
+}
+
 func (c *Client) GetUser(userID uint) User {
 	var user User
 
@@ -174,6 +187,9 @@ func (c *Client) GetBeatmapsetsForUser(userID uint, beatmapTypes map[string]bool
 	var beatmapsets []Beatmapset
 
 	for beatmapType, include := range beatmapTypes {
+		if beatmapType == MOST_PLAYED {
+			beatmapsets = append(beatmapsets)
+		}
 		if include {
 			beatmapsets = append(beatmapsets, c.GetBeatmapsetsForType(userID, beatmapType, beatmapCounts[beatmapType])...)
 		}
@@ -192,12 +208,23 @@ func (c *Client) GetBeatmapsetsForType(
 	offset := 0
 
 	for i := 0; i < forRange; i++ {
-		chunk := c.GetUserBeatmapsets(userID, beatmapType, map[string]interface{}{
-			"limit":  100,
-			"offset": offset,
-		})
+		if beatmapType == MOST_PLAYED {
+			playcountChunk := c.GetUserMostPlayedBeatmapsets(userID, map[string]interface{}{
+				"limit":  100,
+				"offset": offset,
+			})
+			for _, playcount := range playcountChunk {
+				beatmapsets = append(beatmapsets, playcount.Beatmapset)
+			}
+		} else {
+			chunk := c.GetUserBeatmapsets(userID, beatmapType, map[string]interface{}{
+				"limit":  100,
+				"offset": offset,
+			})
 
-		beatmapsets = append(beatmapsets, chunk...)
+			beatmapsets = append(beatmapsets, chunk...)
+		}
+
 		offset += 100
 	}
 
