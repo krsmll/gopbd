@@ -170,11 +170,13 @@ func (c *Client) GetUser(userID uint) User {
 	return user
 }
 
-func (c *Client) GetBeatmapsetsForUser(userID uint, beatmapTypes []string, beatmapCounts map[string]uint) []Beatmapset {
+func (c *Client) GetBeatmapsetsForUser(userID uint, beatmapTypes map[string]bool, beatmapCounts map[string]uint) []Beatmapset {
 	var beatmapsets []Beatmapset
 
-	for _, beatmapType := range beatmapTypes {
-		beatmapsets = append(beatmapsets, c.GetBeatmapsetsForType(userID, beatmapType, beatmapCounts[beatmapType])...)
+	for beatmapType, include := range beatmapTypes {
+		if include {
+			beatmapsets = append(beatmapsets, c.GetBeatmapsetsForType(userID, beatmapType, beatmapCounts[beatmapType])...)
+		}
 	}
 
 	return beatmapsets

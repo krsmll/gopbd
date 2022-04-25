@@ -59,37 +59,6 @@ func GetSecretsFromConfig() (uint, string) {
 
 }
 
-func MapBoolsToBeatmapTypes(
-	mostPlayed bool,
-	favorite bool,
-	ranked bool,
-	loved bool,
-	pending bool,
-	graveyard bool,
-) []string {
-	var beatmapTypesToGet []string
-	if mostPlayed {
-		beatmapTypesToGet = append(beatmapTypesToGet, MOST_PLAYED)
-	}
-	if favorite {
-		beatmapTypesToGet = append(beatmapTypesToGet, FAVOURITE)
-	}
-	if ranked {
-		beatmapTypesToGet = append(beatmapTypesToGet, RANKED)
-	}
-	if loved {
-		beatmapTypesToGet = append(beatmapTypesToGet, LOVED)
-	}
-	if pending {
-		beatmapTypesToGet = append(beatmapTypesToGet, PENDING)
-	}
-	if graveyard {
-		beatmapTypesToGet = append(beatmapTypesToGet, GRAVEYARD)
-	}
-
-	return beatmapTypesToGet
-}
-
 func DownloadMaps(username string, beatmapsets []Beatmapset) {
 	mapsDownloaded := 0
 	for _, beatmapset := range beatmapsets {
@@ -162,14 +131,22 @@ func main() {
 		user := client.GetUser(userID)
 		CreateNecessaryFolders(user.Username)
 		beatmapCountMap := map[string]uint{
-			FAVOURITE: user.FavoriteBeatmapsetCount,
-			RANKED:    user.RankedBeatmapsetCount,
-			LOVED:     user.LovedBeatmapsetCount,
-			PENDING:   user.PendingBeatmapsetCount,
-			GRAVEYARD: user.GraveyardBeatmapsetCount,
+			MOST_PLAYED: user.BeatmapPlaycountsCount,
+			FAVOURITE:   user.FavoriteBeatmapsetCount,
+			RANKED:      user.RankedBeatmapsetCount,
+			LOVED:       user.LovedBeatmapsetCount,
+			PENDING:     user.PendingBeatmapsetCount,
+			GRAVEYARD:   user.GraveyardBeatmapsetCount,
 		}
-		beatmapTypes := MapBoolsToBeatmapTypes(mostPlayed, favorite, ranked, loved, pending, graveyard)
-		beatmapsets := client.GetBeatmapsetsForUser(user.ID, beatmapTypes, beatmapCountMap)
+		beatmapTypesToGet := map[string]bool{
+			MOST_PLAYED: mostPlayed,
+			FAVOURITE:   favorite,
+			RANKED:      ranked,
+			LOVED:       loved,
+			PENDING:     pending,
+			GRAVEYARD:   graveyard,
+		}
+		beatmapsets := client.GetBeatmapsetsForUser(user.ID, beatmapTypesToGet, beatmapCountMap)
 		DownloadMaps(user.Username, beatmapsets)
 		return nil
 	})
