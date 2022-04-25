@@ -96,13 +96,14 @@ func DownloadMaps(username string, beatmapsets []Beatmapset) {
 		chimuURL := "https://api.chimu.moe/v1/download/" + strconv.FormatUint(uint64(beatmapset.ID), 10)
 		resp, err := http.Get(chimuURL)
 		if err != nil || resp.StatusCode != 200 {
-			fmt.Printf("%d failed, please download manually.\n", beatmapset.ID, resp.StatusCode, chimuURL)
+			fmt.Printf("%d failed, please download manually.\n", beatmapset.ID)
 			continue
 		}
 
+		defer resp.Body.Close()
+
 		data, err := io.ReadAll(resp.Body)
 		if err != nil {
-			fmt.Println("flop")
 			fmt.Printf("Reading %d body failed, please download manually.\n", beatmapset.ID)
 		}
 
