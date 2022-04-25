@@ -5,7 +5,6 @@ import (
 	"github.com/devfacet/gocmd/v3"
 	"gopkg.in/ini.v1"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -97,26 +96,27 @@ func DownloadMaps(username string, beatmapsets []Beatmapset) {
 		chimuURL := "https://api.chimu.moe/v1/download/" + strconv.FormatUint(uint64(beatmapset.ID), 10)
 		resp, err := http.Get(chimuURL)
 		if err != nil || resp.StatusCode != 200 {
-			fmt.Printf("%d failed, please download manually.\n", beatmapset.ID)
+			fmt.Printf("%d failed, please download manually.\n", beatmapset.ID, resp.StatusCode, chimuURL)
 			continue
 		}
 
 		data, err := io.ReadAll(resp.Body)
 		if err != nil {
+			fmt.Println("flop")
 			fmt.Printf("Reading %d body failed, please download manually.\n", beatmapset.ID)
 		}
 
 		r := regexp.MustCompile("[<>:\"/\\\\|?*]+")
 		rawFileName := fmt.Sprintf("%d -- %s - %s.osz", beatmapset.ID, beatmapset.Artist, beatmapset.Title)
 		fileName := r.ReplaceAllString(rawFileName, "")
-		err = ioutil.WriteFile("beatmaps/"+username+"/"+fileName, data, 0777)
+		err = os.WriteFile("beatmaps/"+username+"/"+fileName, data, 0777)
 		if err != nil {
 			fmt.Printf("%d failed, please download manually.\n", beatmapset.ID)
 			log.Fatalln(err)
-			//continue
 		}
 		mapsDownloaded++
 		fmt.Printf("Downloaded %d (%d/%d)\n", beatmapset.ID, mapsDownloaded, len(beatmapsets))
+
 	}
 	fmt.Printf("Download complete: Managed to download %d/%d maps.\n", mapsDownloaded, len(beatmapsets))
 }
