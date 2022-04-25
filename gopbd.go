@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"github.com/devfacet/gocmd/v3"
 	"gopkg.in/ini.v1"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"regexp"
 	"strconv"
-	"strings"
 )
 
 func CreateConfigurationFile(clientID uint, clientSecret string) {
@@ -97,18 +96,18 @@ func DownloadMaps(username string, beatmapsets []Beatmapset) {
 	for _, beatmapset := range beatmapsets {
 		chimuURL := "https://api.chimu.moe/v1/download/" + strconv.FormatUint(uint64(beatmapset.ID), 10)
 		resp, err := http.Get(chimuURL)
-		if err != nil {
+		if err != nil || resp.StatusCode != 200 {
 			fmt.Printf("%d failed, please download manually.\n", beatmapset.ID)
+			continue
 		}
 
-		data, err := ioutil.ReadAll(resp.Body)
+		data, err := io.ReadAll(resp.Body)
 		if err != nil {
 			fmt.Printf("Reading %d body failed, please download manually.\n", beatmapset.ID)
 		}
 
 		r := regexp.MustCompile("[<>:\"/\\\\|?*]+")
-		dispositionHeader := resp.Header.Get("content-disposition")
-		rawFileName, _ := url.QueryUnescape(strings.Split(strings.Split(dispositionHeader, "filename=")[1], "\";")[0])
+		rawFileName := fmt.Sprintf("%d -- %s - %s.osz", beatmapset.ID, beatmapset.Artist, beatmapset.Title)
 		fileName := r.ReplaceAllString(rawFileName, "")
 		err = ioutil.WriteFile("beatmaps/"+username+"/"+fileName, data, 0777)
 		if err != nil {
