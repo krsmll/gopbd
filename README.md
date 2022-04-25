@@ -15,8 +15,13 @@
 - Restart your command-line interface.
 - Run `gopbd --help`.
 
+or... Downloaad an executable from Releases... Soon™ 
+
 ## How to Use:
 
 ill add it soon i cba rn
+
+## To Do:
+- Add executables for different operating systems to Releases.
 
 The beatmaps are saved into the project root folder `/beatmaps`.
