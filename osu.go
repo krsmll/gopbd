@@ -187,9 +187,6 @@ func (c *Client) GetBeatmapsetsForUser(userID uint, beatmapTypes map[string]bool
 	var beatmapsets []Beatmapset
 
 	for beatmapType, include := range beatmapTypes {
-		if beatmapType == MOST_PLAYED {
-			beatmapsets = append(beatmapsets)
-		}
 		if include {
 			beatmapsets = append(beatmapsets, c.GetBeatmapsetsForType(userID, beatmapType, beatmapCounts[beatmapType])...)
 		}
