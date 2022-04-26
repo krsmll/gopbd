@@ -23,10 +23,18 @@ You can access the help command using `--help` or `-h`.
 
 ### Configuration file generation
 
-Configuration file generation is fairly straightforward. The following command will create a
+Configuration file generation is fairly straightforward. The following command will create a configuration file in your
+home directory.
 
-```goub generate_config --client_id YOUR_CLIENT_ID --client_secret YOUR_CLIENT_SECRET```
+```console
+goub generate_config --client_id YOUR_CLIENT_ID --client_secret YOUR_CLIENT_SECRET
+```
 
 Obviously, replace `YOUR_CLIENT_ID` and `YOUR_CLIENT_ID_HERE` with your **osu! API v2** credentials.
 
-The beatmaps are saved into the project root folder `/beatmaps`.
+### Downloading beatmaps
+
+The following downloads all Ryuusei Aika's ranked and favorite beatmapsets.
+```console
+goub download -u 7777875 --ranked --favorite
+```

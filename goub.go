@@ -37,7 +37,7 @@ func CreateConfigurationFile(clientID uint, clientSecret string) {
 
 	_ = cfg.SaveTo(configDir)
 
-	fmt.Printf("Successfully created the configuration file at:%s\n", configDir)
+	fmt.Printf("Successfully created the configuration file at: %s\n", configDir)
 }
 
 func CreateDefaultOutputFolders(username string) string {
