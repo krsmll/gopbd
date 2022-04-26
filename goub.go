@@ -14,40 +14,61 @@ import (
 )
 
 func CreateConfigurationFile(clientID uint, clientSecret string) {
-	fmt.Println("Creating configuration file in the root folder of the project.")
-	file, _ := os.Create("config.ini") // Creates or truncates the file
+	fmt.Println("Creating configuration file in your home directory.")
+	var configDir string
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatalf("Unable to get user home directory:\n%s", err)
+	}
+
+	configDir = homeDir + "/goub-config.ini"
+	file, _ := os.Create(configDir) // Creates or truncates the file
 	file.Close()
 
-	cfg, err := ini.Load("config.ini")
+	cfg, err := ini.Load(configDir)
 	if err != nil {
-		fmt.Printf("Fail to read file: %v", err)
-		os.Exit(1)
+		log.Fatalf("Unable to read configuration file:\n%s", err)
 	}
 
 	cfg.NewSection("OSU_SECRETS")
 	cfg.Section("OSU_SECRETS").NewKey("CLIENT_ID", strconv.FormatUint(uint64(clientID), 10))
 	cfg.Section("OSU_SECRETS").NewKey("CLIENT_SECRET", clientSecret)
 
-	_ = cfg.SaveTo("config.ini")
+	_ = cfg.SaveTo(configDir)
 
-	fmt.Println("Successfully created the configuration file.")
+	fmt.Printf("Successfully created the configuration file at:%s\n", configDir)
 }
 
-func CreateNecessaryFolders(username string) {
+func CreateDefaultOutputFolders(username string) string {
 	if _, err := os.Stat("beatmaps"); os.IsNotExist(err) {
 		os.Mkdir("beatmaps", 0777)
 	}
 
+	outputDir := "beatmaps/" + username
 	if _, err := os.Stat("beatmaps/" + username); os.IsNotExist(err) {
-		os.Mkdir("beatmaps/"+username, 0777)
+		os.Mkdir(outputDir, 0777)
 	}
+
+	return outputDir
+}
+
+func ErrorIfOutputDirDoesNotExist(outputDir string) error {
+	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }
 
 func GetSecretsFromConfig() (uint, string) {
-	cfg, err := ini.Load("config.ini")
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Printf("Fail to read file: %v", err)
-		os.Exit(1)
+		log.Fatalf("Unable to get user home directory:\n%s", err)
+	}
+
+	cfg, err := ini.Load(homeDir + "/goub-config.ini")
+	if err != nil {
+		log.Fatalf("Unable to read configuration file:\n%s", err)
 	}
 
 	clientID, err := cfg.Section("OSU_SECRETS").Key("CLIENT_ID").Uint()
@@ -57,10 +78,9 @@ func GetSecretsFromConfig() (uint, string) {
 	clientSecret := cfg.Section("OSU_SECRETS").Key("CLIENT_SECRET").String()
 
 	return clientID, clientSecret
-
 }
 
-func DownloadMaps(username string, beatmapsets map[uint]Beatmapset) {
+func DownloadMaps(beatmapsets map[uint]Beatmapset, outputDir string) {
 	mapsDownloaded := 0
 	for _, beatmapset := range beatmapsets {
 		chimuURL := "https://api.chimu.moe/v1/download/" + strconv.FormatUint(uint64(beatmapset.ID), 10)
@@ -80,7 +100,7 @@ func DownloadMaps(username string, beatmapsets map[uint]Beatmapset) {
 		r := regexp.MustCompile("[<>:\"/\\\\|?*]+")
 		rawFileName := fmt.Sprintf("%d %s - %s.osz", beatmapset.ID, beatmapset.Artist, beatmapset.Title)
 		fileName := r.ReplaceAllString(rawFileName, "")
-		err = os.WriteFile("beatmaps/"+username+"/"+fileName, data, 0777)
+		err = os.WriteFile(outputDir+"/"+fileName, data, 0777)
 		if err != nil {
 			fmt.Printf("%d failed, please download manually.\n", beatmapset.ID)
 			log.Fatalln(err)
@@ -120,6 +140,7 @@ func main() {
 	})
 
 	gocmd.HandleFlag("Download", func(cmd *gocmd.Cmd, args []string) error {
+		outputDir := flags.Download.OutputDirectory
 		userID := flags.Download.User
 		mostPlayed := flags.Download.MostPlayed
 		favorite := flags.Download.Favorite
@@ -136,7 +157,13 @@ func main() {
 		client := CreateClient(clientID, clientSecret)
 
 		user := client.GetUser(userID)
-		CreateNecessaryFolders(user.Username)
+
+		if outputDir == "" {
+			outputDir = CreateDefaultOutputFolders(user.Username)
+		} else if err := ErrorIfOutputDirDoesNotExist(outputDir); err != nil {
+			log.Fatalf("Output folder does not exist:\n%s", err)
+		}
+
 		beatmapCountMap := map[string]uint{
 			MOST_PLAYED: user.BeatmapPlaycountsCount,
 			FAVOURITE:   user.FavoriteBeatmapsetCount,
@@ -154,7 +181,7 @@ func main() {
 			GRAVEYARD:   graveyard,
 		}
 		beatmapsets := client.GetBeatmapsetsForUser(user.ID, beatmapTypesToGet, beatmapCountMap)
-		DownloadMaps(user.Username, beatmapsets)
+		DownloadMaps(beatmapsets, outputDir)
 		return nil
 	})
 

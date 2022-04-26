@@ -183,12 +183,16 @@ func (c *Client) GetUser(userID uint) User {
 	return user
 }
 
-func (c *Client) GetBeatmapsetsForUser(userID uint, beatmapTypes map[string]bool, beatmapCounts map[string]uint) []Beatmapset {
-	var beatmapsets []Beatmapset
+func (c *Client) GetBeatmapsetsForUser(userID uint, beatmapTypes map[string]bool, beatmapCounts map[string]uint) map[uint]Beatmapset {
+	var beatmapsets = make(map[uint]Beatmapset)
 
 	for beatmapType, include := range beatmapTypes {
 		if include {
-			beatmapsets = append(beatmapsets, c.GetBeatmapsetsForType(userID, beatmapType, beatmapCounts[beatmapType])...)
+			beatmapsForType := c.GetBeatmapsetsForType(userID, beatmapType, beatmapCounts[beatmapType])
+
+			for _, beatmapset := range beatmapsForType {
+				beatmapsets[beatmapset.ID] = beatmapset
+			}
 		}
 	}
 
@@ -199,8 +203,8 @@ func (c *Client) GetBeatmapsetsForType(
 	userID uint,
 	beatmapType string,
 	mapCount uint,
-) []Beatmapset {
-	var beatmapsets []Beatmapset
+) map[uint]Beatmapset {
+	var beatmapsets = make(map[uint]Beatmapset)
 	forRange := int(math.Ceil(float64(mapCount) / 100))
 	offset := 0
 
@@ -211,7 +215,8 @@ func (c *Client) GetBeatmapsetsForType(
 				"offset": offset,
 			})
 			for _, playcount := range playcountChunk {
-				beatmapsets = append(beatmapsets, playcount.Beatmapset)
+				beatmapset := playcount.Beatmapset
+				beatmapsets[beatmapset.ID] = beatmapset
 			}
 		} else {
 			chunk := c.GetUserBeatmapsets(userID, beatmapType, map[string]interface{}{
@@ -219,7 +224,9 @@ func (c *Client) GetBeatmapsetsForType(
 				"offset": offset,
 			})
 
-			beatmapsets = append(beatmapsets, chunk...)
+			for _, beatmapset := range chunk {
+				beatmapsets[beatmapset.ID] = beatmapset
+			}
 		}
 
 		offset += 100

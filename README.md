@@ -13,15 +13,20 @@
 - Add the path to that file in PATH environment
   variable. [Windows tutorial here.](https://stackoverflow.com/questions/44272416/how-to-add-a-folder-to-path-environment-variable-in-windows-10-with-screensho)
 - Restart your command-line interface.
-- Run `gopbd --help`.
+- Run `goub --help`.
 
-or... Downloaad an executable from Releases... Soon™ 
+Executables will be added to Releases when I am absolutely sure it's done.
 
 ## How to Use:
 
-ill add it soon i cba rn
+You can access the help command using `--help` or `-h`.
 
-## To Do:
-- Add executables for different operating systems to Releases.
+### Configuration file generation
+
+Configuration file generation is fairly straightforward. The following command will create a
+
+```goub generate_config --client_id YOUR_CLIENT_ID --client_secret YOUR_CLIENT_SECRET```
+
+Obviously, replace `YOUR_CLIENT_ID` and `YOUR_CLIENT_ID_HERE` with your **osu! API v2** credentials.
 
 The beatmaps are saved into the project root folder `/beatmaps`.

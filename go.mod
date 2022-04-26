@@ -1,4 +1,4 @@
-module github.com/krsmll/gopbd
+module github.com/krsmll/goub
 
 go 1.18
 
