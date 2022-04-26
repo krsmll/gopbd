@@ -38,3 +38,5 @@ The following downloads all Ryuusei Aika's ranked and favorite beatmapsets.
 ```console
 goub download -u 7777875 --ranked --favorite
 ```
+
+`goub --help` for more.
