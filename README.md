@@ -17,6 +17,8 @@
 
 Executables will be added to Releases when I am absolutely sure it's done.
 
+[About being flagged as virus.](https://go.dev/doc/faq#virus)
+
 ## How to Use:
 
 You can access the help command using `--help` or `-h`.

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"math"
@@ -12,6 +13,8 @@ import (
 
 var oauthURL = "https://osu.ppy.sh/oauth/token"
 var apiBaseURL = "https://osu.ppy.sh/api/v2/"
+
+var requests uint = 1
 
 // osu! structs are missing many unneeded fields for the application to operate.
 // For the complete list of fields/objects visit: https://osu.ppy.sh/docs/index.html
@@ -130,6 +133,9 @@ func (c *Client) GetReq(url string, params map[string]interface{}) []byte {
 	if err != nil {
 		log.Fatalf("Unable to make GET request to %s:\n%s", reqURL, err)
 	}
+
+	requests += 1
+	fmt.Printf("Total Requests: %d\n", requests)
 
 	defer res.Body.Close()
 
