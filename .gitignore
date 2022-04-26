@@ -1,6 +1,6 @@
 /beatmaps
 /.idea
-config.ini
+goub-config.ini
 oauth_token.json
 *.exe
 *.exe~

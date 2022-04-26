@@ -60,7 +60,7 @@ func GetSecretsFromConfig() (uint, string) {
 
 }
 
-func DownloadMaps(username string, beatmapsets []Beatmapset) {
+func DownloadMaps(username string, beatmapsets map[uint]Beatmapset) {
 	mapsDownloaded := 0
 	for _, beatmapset := range beatmapsets {
 		chimuURL := "https://api.chimu.moe/v1/download/" + strconv.FormatUint(uint64(beatmapset.ID), 10)
@@ -78,7 +78,7 @@ func DownloadMaps(username string, beatmapsets []Beatmapset) {
 		}
 
 		r := regexp.MustCompile("[<>:\"/\\\\|?*]+")
-		rawFileName := fmt.Sprintf("%d -- %s - %s.osz", beatmapset.ID, beatmapset.Artist, beatmapset.Title)
+		rawFileName := fmt.Sprintf("%d %s - %s.osz", beatmapset.ID, beatmapset.Artist, beatmapset.Title)
 		fileName := r.ReplaceAllString(rawFileName, "")
 		err = os.WriteFile("beatmaps/"+username+"/"+fileName, data, 0777)
 		if err != nil {
@@ -101,13 +101,14 @@ func main() {
 			ClientSecret string `short:"s" long:"client_secret" required:"true" description:"Client secret for the osu! API."`
 		} `command:"generate_config" description:"Generate a configuration file for osu! API."`
 		Download struct {
-			User       uint `short:"u" long:"user" required:"true" description:"Numerical ID of the target user."`
-			MostPlayed bool `short:"m" long:"most_played" description:"Download user's most played beatmaps."`
-			Favorite   bool `short:"f" long:"favorite" description:"Download user's favorite beatmaps."`
-			Ranked     bool `short:"r" long:"ranked" description:"Download user's ranked beatmaps."`
-			Loved      bool `short:"l" long:"loved" description:"Download user's loved beatmaps."`
-			Pending    bool `short:"p" long:"pending" description:"Download user's pending beatmaps."`
-			Graveyard  bool `short:"g" long:"graveyard" description:"Download user's graveyard beatmaps."`
+			OutputDirectory string `short:"o" long:"output_directory" description:"Optional absolute path to the output folder. All maps will be saved there. Maps will be saved to the '/beatmaps/{target_user}' in the folder from which the program was called if not specified."`
+			User            uint   `short:"u" long:"user" required:"true" description:"Required! Numerical ID of the target user."`
+			MostPlayed      bool   `short:"m" long:"most_played" description:"Download user's most played beatmaps."`
+			Favorite        bool   `short:"f" long:"favorite" description:"Download user's favorite beatmaps."`
+			Ranked          bool   `short:"r" long:"ranked" description:"Download user's ranked beatmaps."`
+			Loved           bool   `short:"l" long:"loved" description:"Download user's loved beatmaps."`
+			Pending         bool   `short:"p" long:"pending" description:"Download user's pending beatmaps."`
+			Graveyard       bool   `short:"g" long:"graveyard" description:"Download user's graveyard beatmaps."`
 		} `command:"download" description:"Download beatmaps from user's profile."`
 	}{}
 
@@ -126,6 +127,10 @@ func main() {
 		loved := flags.Download.Loved
 		pending := flags.Download.Pending
 		graveyard := flags.Download.Graveyard
+
+		if !(mostPlayed || favorite || ranked || loved || pending || graveyard) {
+			log.Fatalln("Please specify at least one beatmap type you want.")
+		}
 
 		clientID, clientSecret := GetSecretsFromConfig()
 		client := CreateClient(clientID, clientSecret)
