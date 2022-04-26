@@ -1,6 +1,6 @@
-# gopbd
+# goub
 
-## osu! Profile Beatmap Downloader
+## osu! User Beatmap Downloader
 
 ## Installation:
 
