@@ -129,6 +129,9 @@ func main() {
 			Loved           bool   `short:"l" long:"loved" description:"Download user's loved beatmaps."`
 			Pending         bool   `short:"p" long:"pending" description:"Download user's pending beatmaps."`
 			Graveyard       bool   `short:"g" long:"graveyard" description:"Download user's graveyard beatmaps."`
+			Best            bool   `short:"b" long:"best" description:"Download user's top play beatmaps."`
+			Firsts          bool   `short:"1" long:"firsts" description:"Download user's beatmaps where they hold the first place."`
+			GameMode        string `long:"gamemode" description:"Specify game mode if downloading best or firsts. Choose: fruits, mania, osu, taiko." default:"osu" args:"osu,taiko,mania,fruits" allow-unknown-arg:"false"`
 		} `command:"download" description:"Download beatmaps from user's profile."`
 	}{}
 
@@ -148,8 +151,11 @@ func main() {
 		loved := flags.Download.Loved
 		pending := flags.Download.Pending
 		graveyard := flags.Download.Graveyard
+		best := flags.Download.Best
+		firsts := flags.Download.Firsts
+		gameMode := flags.Download.GameMode
 
-		if !(mostPlayed || favorite || ranked || loved || pending || graveyard) {
+		if !(mostPlayed || favorite || ranked || loved || pending || graveyard || best || firsts) {
 			log.Fatalln("Please specify at least one beatmap type you want.")
 		}
 
@@ -171,6 +177,8 @@ func main() {
 			LOVED:       user.LovedBeatmapsetCount,
 			PENDING:     user.PendingBeatmapsetCount,
 			GRAVEYARD:   user.GraveyardBeatmapsetCount,
+			FIRSTS:      user.ScoresFirstCount,
+			BEST:        user.ScoresBestCount,
 		}
 		beatmapTypesToGet := map[string]bool{
 			MOST_PLAYED: mostPlayed,
@@ -179,8 +187,10 @@ func main() {
 			LOVED:       loved,
 			PENDING:     pending,
 			GRAVEYARD:   graveyard,
+			BEST:        best,
+			FIRSTS:      firsts,
 		}
-		beatmapsets := client.GetBeatmapsetsForUser(user.ID, beatmapTypesToGet, beatmapCountMap)
+		beatmapsets := client.GetBeatmapsetsForUser(user.ID, beatmapTypesToGet, beatmapCountMap, gameMode)
 		DownloadMaps(beatmapsets, outputDir)
 		return nil
 	})

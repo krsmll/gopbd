@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"math"
@@ -26,6 +27,10 @@ type BeatmapPlaycount struct {
 	Beatmapset Beatmapset `json:"beatmapset"`
 }
 
+type Score struct {
+	Beatmapset Beatmapset `json:"beatmapset"`
+}
+
 type User struct {
 	ID                       uint   `json:"id"`
 	Username                 string `json:"username"`
@@ -35,6 +40,8 @@ type User struct {
 	PendingBeatmapsetCount   uint   `json:"pending_beatmapset_count"`
 	GraveyardBeatmapsetCount uint   `json:"graveyard_beatmapset_count"`
 	BeatmapPlaycountsCount   uint   `json:"beatmap_playcounts_count"`
+	ScoresBestCount          uint   `json:"scores_best_count"`
+	ScoresFirstCount         uint   `json:"scores_first_count"`
 }
 
 type Token struct {
@@ -58,6 +65,8 @@ type Client struct {
 }
 
 const (
+	BEST        = "best"
+	FIRSTS      = "firsts"
 	FAVOURITE   = "favourite"
 	GRAVEYARD   = "graveyard"
 	LOVED       = "loved"
@@ -154,17 +163,41 @@ func (c *Client) GetUserBeatmapsets(userID uint, beatmapType string, params map[
 	return beatmapsets
 }
 
-func (c *Client) GetUserMostPlayedBeatmapsets(userID uint, params map[string]interface{}) []BeatmapPlaycount {
+func (c *Client) GetUserBeatmapsetsFromScores(userID uint, scoreType string, params map[string]interface{}) []Beatmapset {
+	var scores []Score
+	var beatmapsets = []Beatmapset{}
+
+	url := fmt.Sprintf("users/%d/scores/%s", userID, scoreType)
+	body := c.GetReq(url, params)
+	fmt.Println(string(body))
+	err := json.Unmarshal(body, &scores)
+	if err != nil {
+		log.Fatalf("Unable to unmarshal JSON array of scores into []Score:\n%s", err)
+	}
+
+	for _, score := range scores {
+		beatmapsets = append(beatmapsets, score.Beatmapset)
+	}
+
+	return beatmapsets
+}
+
+func (c *Client) GetUserMostPlayedBeatmapsets(userID uint, params map[string]interface{}) []Beatmapset {
 	var beatmapsetPlaycounts []BeatmapPlaycount
+	var beatmapsets = []Beatmapset{}
 
 	url := "users/" + strconv.FormatUint(uint64(userID), 10) + "/beatmapsets/" + MOST_PLAYED
 	body := c.GetReq(url, params)
 	err := json.Unmarshal(body, &beatmapsetPlaycounts)
 	if err != nil {
 		log.Fatalf("Unable to unmarshal JSON array of beatmaps into []Beatmapset:\n%s", err)
-		return []BeatmapPlaycount{}
 	}
-	return beatmapsetPlaycounts
+
+	for _, playcount := range beatmapsetPlaycounts {
+		beatmapsets = append(beatmapsets, playcount.Beatmapset)
+	}
+
+	return beatmapsets
 }
 
 func (c *Client) GetUser(userID uint) User {
@@ -183,12 +216,12 @@ func (c *Client) GetUser(userID uint) User {
 	return user
 }
 
-func (c *Client) GetBeatmapsetsForUser(userID uint, beatmapTypes map[string]bool, beatmapCounts map[string]uint) map[uint]Beatmapset {
+func (c *Client) GetBeatmapsetsForUser(userID uint, beatmapTypes map[string]bool, beatmapCounts map[string]uint, gameMode string) map[uint]Beatmapset {
 	var beatmapsets = make(map[uint]Beatmapset)
 
 	for beatmapType, include := range beatmapTypes {
 		if include {
-			beatmapsForType := c.GetBeatmapsetsForType(userID, beatmapType, beatmapCounts[beatmapType])
+			beatmapsForType := c.GetBeatmapsetsForType(userID, beatmapType, beatmapCounts[beatmapType], gameMode)
 
 			for _, beatmapset := range beatmapsForType {
 				beatmapsets[beatmapset.ID] = beatmapset
@@ -199,34 +232,33 @@ func (c *Client) GetBeatmapsetsForUser(userID uint, beatmapTypes map[string]bool
 	return beatmapsets
 }
 
-func (c *Client) GetBeatmapsetsForType(
-	userID uint,
-	beatmapType string,
-	mapCount uint,
-) map[uint]Beatmapset {
+func (c *Client) GetBeatmapsetsForType(userID uint, beatmapType string, mapCount uint, gameMode string) map[uint]Beatmapset {
 	var beatmapsets = make(map[uint]Beatmapset)
 	forRange := int(math.Ceil(float64(mapCount) / 100))
 	offset := 0
 
 	for i := 0; i < forRange; i++ {
+		var chunk []Beatmapset
 		if beatmapType == MOST_PLAYED {
-			playcountChunk := c.GetUserMostPlayedBeatmapsets(userID, map[string]interface{}{
+			chunk = c.GetUserMostPlayedBeatmapsets(userID, map[string]interface{}{
 				"limit":  100,
 				"offset": offset,
 			})
-			for _, playcount := range playcountChunk {
-				beatmapset := playcount.Beatmapset
-				beatmapsets[beatmapset.ID] = beatmapset
-			}
+		} else if beatmapType == BEST || beatmapType == FIRSTS {
+			chunk = c.GetUserBeatmapsetsFromScores(userID, beatmapType, map[string]interface{}{
+				"mode":   gameMode,
+				"limit":  100,
+				"offset": offset,
+			})
 		} else {
-			chunk := c.GetUserBeatmapsets(userID, beatmapType, map[string]interface{}{
+			chunk = c.GetUserBeatmapsets(userID, beatmapType, map[string]interface{}{
 				"limit":  100,
 				"offset": offset,
 			})
+		}
 
-			for _, beatmapset := range chunk {
-				beatmapsets[beatmapset.ID] = beatmapset
-			}
+		for _, beatmapset := range chunk {
+			beatmapsets[beatmapset.ID] = beatmapset
 		}
 
 		offset += 100

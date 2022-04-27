@@ -15,7 +15,7 @@
 - Restart your command-line interface.
 - Run `goub --help`.
 
-Executables will be added to Releases when I am absolutely sure it's done.
+Pre-built executables will be added to Releases when I am absolutely sure it's done.
 
 [About being flagged as virus.](https://go.dev/doc/faq#virus)
 
@@ -50,7 +50,6 @@ goub download -u 7777875 -r -f -o C:\Users\Kris\AppData\Local\osu!\Songs
 ```
 
 `goub --help` for more.
-
 
 ## Todo
 
