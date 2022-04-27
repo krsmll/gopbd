@@ -53,5 +53,5 @@ goub download -u 7777875 -r -f -o C:\Users\Kris\AppData\Local\osu!\Songs
 
 ## Todo
 
-- Ability to download top plays (im lazy)
+- ~~Ability to download top plays (im lazy)~~ **Done.**
 - Recursively download user's favorites and the favorite beatmapset's creator's favorite beatmapsets and so on.
