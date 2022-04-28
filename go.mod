@@ -1,4 +1,4 @@
-module github.com/krsmll/goub
+module goub
 
 go 1.18
 

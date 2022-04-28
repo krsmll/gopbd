@@ -4,13 +4,10 @@ import (
 	"fmt"
 	"github.com/devfacet/gocmd/v3"
 	"gopkg.in/ini.v1"
-	"io"
+	"goub/api"
 	"log"
-	"net/http"
 	"os"
-	"regexp"
 	"strconv"
-	"time"
 )
 
 func CreateConfigurationFile(clientID uint, clientSecret string) {
@@ -80,39 +77,6 @@ func GetSecretsFromConfig() (uint, string) {
 	return clientID, clientSecret
 }
 
-func DownloadMaps(beatmapsets map[uint]Beatmapset, outputDir string) {
-	mapsDownloaded := 0
-	for _, beatmapset := range beatmapsets {
-		chimuURL := "https://api.chimu.moe/v1/download/" + strconv.FormatUint(uint64(beatmapset.ID), 10)
-		resp, err := http.Get(chimuURL)
-		if err != nil || resp.StatusCode != 200 {
-			fmt.Printf("%d failed, please download manually.\n", beatmapset.ID)
-			continue
-		}
-
-		defer resp.Body.Close()
-
-		data, err := io.ReadAll(resp.Body)
-		if err != nil {
-			fmt.Printf("Reading %d body failed, please download manually.\n", beatmapset.ID)
-		}
-
-		r := regexp.MustCompile("[<>:\"/\\\\|?*]+")
-		rawFileName := fmt.Sprintf("%d %s - %s.osz", beatmapset.ID, beatmapset.Artist, beatmapset.Title)
-		fileName := r.ReplaceAllString(rawFileName, "")
-		err = os.WriteFile(outputDir+"/"+fileName, data, 0777)
-		if err != nil {
-			fmt.Printf("%d failed, please download manually.\n", beatmapset.ID)
-			log.Fatalln(err)
-		}
-		mapsDownloaded++
-		fmt.Printf("Downloaded %d (%d/%d)\n", beatmapset.ID, mapsDownloaded, len(beatmapsets))
-		time.Sleep(300 * time.Millisecond) // chimu is rate limited so i guess it has to be slower...
-
-	}
-	fmt.Printf("Download complete: Managed to download %d/%d maps.\n", mapsDownloaded, len(beatmapsets))
-}
-
 func main() {
 	flags := struct {
 		Help           bool `short:"h" long:"help" description:"Display usage" global:"true"`
@@ -160,7 +124,7 @@ func main() {
 		}
 
 		clientID, clientSecret := GetSecretsFromConfig()
-		client := CreateClient(clientID, clientSecret)
+		client := api.CreateClient(clientID, clientSecret)
 
 		user := client.GetUser(userID)
 
@@ -171,27 +135,27 @@ func main() {
 		}
 
 		beatmapCountMap := map[string]uint{
-			MOST_PLAYED: user.BeatmapPlaycountsCount,
-			FAVOURITE:   user.FavoriteBeatmapsetCount,
-			RANKED:      user.RankedBeatmapsetCount,
-			LOVED:       user.LovedBeatmapsetCount,
-			PENDING:     user.PendingBeatmapsetCount,
-			GRAVEYARD:   user.GraveyardBeatmapsetCount,
-			FIRSTS:      user.ScoresFirstCount,
-			BEST:        user.ScoresBestCount,
+			api.MostPlayed: user.BeatmapPlaycountsCount,
+			api.Favorite:   user.FavoriteBeatmapsetCount,
+			api.Ranked:     user.RankedBeatmapsetCount,
+			api.LOVED:      user.LovedBeatmapsetCount,
+			api.Pending:    user.PendingBeatmapsetCount,
+			api.Graveyard:  user.GraveyardBeatmapsetCount,
+			api.Firsts:     user.ScoresFirstCount,
+			api.Best:       user.ScoresBestCount,
 		}
 		beatmapTypesToGet := map[string]bool{
-			MOST_PLAYED: mostPlayed,
-			FAVOURITE:   favorite,
-			RANKED:      ranked,
-			LOVED:       loved,
-			PENDING:     pending,
-			GRAVEYARD:   graveyard,
-			BEST:        best,
-			FIRSTS:      firsts,
+			api.MostPlayed: mostPlayed,
+			api.Favorite:   favorite,
+			api.Ranked:     ranked,
+			api.LOVED:      loved,
+			api.Pending:    pending,
+			api.Graveyard:  graveyard,
+			api.Best:       best,
+			api.Firsts:     firsts,
 		}
 		beatmapsets := client.GetBeatmapsetsForUser(user.ID, beatmapTypesToGet, beatmapCountMap, gameMode)
-		DownloadMaps(beatmapsets, outputDir)
+		client.DownloadMaps(beatmapsets, outputDir)
 		return nil
 	})
 
