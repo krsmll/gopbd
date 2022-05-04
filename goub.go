@@ -7,7 +7,6 @@ import (
 	"goub/api"
 	"log"
 	"os"
-	"strconv"
 )
 
 func CreateConfigurationFile(clientID uint, clientSecret string) {
@@ -29,7 +28,7 @@ func CreateConfigurationFile(clientID uint, clientSecret string) {
 	}
 
 	cfg.NewSection("OSU_SECRETS")
-	cfg.Section("OSU_SECRETS").NewKey("CLIENT_ID", strconv.FormatUint(uint64(clientID), 10))
+	cfg.Section("OSU_SECRETS").NewKey("CLIENT_ID", fmt.Sprintf("%d", clientID))
 	cfg.Section("OSU_SECRETS").NewKey("CLIENT_SECRET", clientSecret)
 
 	_ = cfg.SaveTo(configDir)

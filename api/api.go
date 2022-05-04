@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"strconv"
 	"time"
 )
 
@@ -23,16 +22,17 @@ type Client struct {
 }
 
 const (
-	OAuthURL   = "https://osu.ppy.sh/oauth/token"
-	BaseURL    = "https://osu.ppy.sh/api/v2/"
-	Best       = "best"
-	Firsts     = "firsts"
-	Favorite   = "favourite"
-	Graveyard  = "graveyard"
-	LOVED      = "loved"
-	MostPlayed = "most_played"
-	Ranked     = "ranked"
-	Pending    = "pending"
+	ChimuDownloadURL = "https://api.chimu.moe/v1/download/"
+	OAuthURL         = "https://osu.ppy.sh/oauth/token"
+	BaseURL          = "https://osu.ppy.sh/api/v2/"
+	Best             = "best"
+	Firsts           = "firsts"
+	Favorite         = "favourite"
+	Graveyard        = "graveyard"
+	LOVED            = "loved"
+	MostPlayed       = "most_played"
+	Ranked           = "ranked"
+	Pending          = "pending"
 )
 
 func CreateClient(clientID uint, clientSecret string) Client {
@@ -221,8 +221,8 @@ func (c *Client) GetBeatmapsetsForType(userID uint, beatmapType string, mapCount
 func (c *Client) DownloadMaps(beatmapsets map[uint]Beatmapset, outputDir string) {
 	mapsDownloaded := 0
 	for _, beatmapset := range beatmapsets {
-		chimuURL := "https://api.chimu.moe/v1/download/" + strconv.FormatUint(uint64(beatmapset.ID), 10)
-		data, err := c.GetReq(chimuURL, nil)
+		downloadURL := fmt.Sprintf("%s%d", ChimuDownloadURL, beatmapset.ID)
+		data, err := c.GetReq(downloadURL, nil)
 		if err != nil {
 			fmt.Printf("%d failed, please download manually.\n", beatmapset.ID)
 			continue
