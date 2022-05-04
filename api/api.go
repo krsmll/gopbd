@@ -222,12 +222,17 @@ func (c *Client) DownloadMaps(beatmapsets map[uint]Beatmapset, outputDir string)
 	mapsDownloaded := 0
 	for _, beatmapset := range beatmapsets {
 		downloadURL := fmt.Sprintf("%s%d", ChimuDownloadURL, beatmapset.ID)
-		data, err := c.GetReq(downloadURL, nil)
+		resp, err := c.HttpClient.Get(downloadURL)
 		if err != nil {
 			fmt.Printf("%d failed, please download manually.\n", beatmapset.ID)
 			continue
 		}
 
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Printf("%d failed, please download manually.\n", beatmapset.ID)
+			continue
+		}
 		r := regexp.MustCompile("[<>:\"/\\\\|?*]+")
 		rawFileName := fmt.Sprintf("%d %s - %s.osz", beatmapset.ID, beatmapset.Artist, beatmapset.Title)
 		fileName := r.ReplaceAllString(rawFileName, "")
