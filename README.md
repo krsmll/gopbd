@@ -66,6 +66,22 @@ goub download -u 7777875 -r -f -o C:\Users\Kris\AppData\Local\osu!\Songs
 
 ### Recursive Favorites
 
+[**What is recursion?**](https://en.wikipedia.org/wiki/Recursion_(computer_science))
+
+Recursively downloads your favorite beatmapsets and the beatmapset's author's favorite beatmapsets and so on. Usually takes a **VERY** long time without specifying the recursion depth limit.
+
+The usage is straight-forward. The following command downloads Ryuusei Aika's favorite beatmaps etc.
+
+```console
+goub recursive_favorites -u 7777875
+```
+
+You **CAN** and it **IS** recommended to specify recursion depth limit using `-d` or `--depth` argument. For example:
+
+```console
+goub recursive_favorites -u 7777875 -d 3
+```
+
 ## Todo
 
 - ~~Ability to download top plays (im lazy)~~
