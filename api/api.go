@@ -29,7 +29,7 @@ const (
 	Firsts           = "firsts"
 	Favorite         = "favourite"
 	Graveyard        = "graveyard"
-	LOVED            = "loved"
+	Loved            = "loved"
 	MostPlayed       = "most_played"
 	Ranked           = "ranked"
 	Pending          = "pending"
@@ -168,6 +168,7 @@ func (c *Client) GetUser(userID uint) User {
 }
 
 func (c *Client) GetBeatmapsetsForUser(userID uint, beatmapTypes map[string]bool, beatmapCounts map[string]uint, gameMode string) map[uint]Beatmapset {
+	fmt.Printf("Fetching beatmapset IDs for %d, this may take a while.\n", userID)
 	var beatmapsets = make(map[uint]Beatmapset)
 
 	for beatmapType, include := range beatmapTypes {
@@ -247,4 +248,28 @@ func (c *Client) DownloadMaps(beatmapsets map[uint]Beatmapset, outputDir string)
 
 	}
 	fmt.Printf("Download complete: Managed to download %d/%d maps.\n", mapsDownloaded, len(beatmapsets))
+}
+
+func (c *Client) GetBeatmapIDsForRecursiveFavorites(user User, userBeatmapsets map[User]map[uint]Beatmapset, currentDepth uint, maxDepth uint) map[User]map[uint]Beatmapset {
+	if _, userExists := userBeatmapsets[user]; userExists {
+		return userBeatmapsets
+	}
+
+	fmt.Printf("Fetching beatmapset IDs for %s.\n", user.Username)
+
+	beatmapsets := c.GetBeatmapsetsForType(user.ID, Favorite, user.FavoriteBeatmapsetCount, "osu")
+	userBeatmapsets[user] = beatmapsets
+
+	depth := currentDepth + 1
+
+	if depth >= maxDepth {
+		return userBeatmapsets
+	}
+
+	for _, beatmapset := range beatmapsets {
+		creator := c.GetUser(beatmapset.UserID)
+		userBeatmapsets = c.GetBeatmapIDsForRecursiveFavorites(creator, userBeatmapsets, depth, maxDepth)
+	}
+
+	return userBeatmapsets
 }

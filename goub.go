@@ -38,12 +38,12 @@ func CreateConfigurationFile(clientID uint, clientSecret string) {
 
 func CreateDefaultOutputFolders(username string) string {
 	if _, err := os.Stat("beatmaps"); os.IsNotExist(err) {
-		os.Mkdir("beatmaps", 0777)
+		os.Mkdir("beatmaps", 0666)
 	}
 
 	outputDir := "beatmaps/" + username
 	if _, err := os.Stat("beatmaps/" + username); os.IsNotExist(err) {
-		os.Mkdir(outputDir, 0777)
+		os.Mkdir(outputDir, 0666)
 	}
 
 	return outputDir
@@ -76,6 +76,29 @@ func GetSecretsFromConfig() (uint, string) {
 	return clientID, clientSecret
 }
 
+func CreateFolders(user api.User, outputDir string) string {
+	if outputDir == "" {
+		return CreateDefaultOutputFolders(user.Username)
+	} else if err := ErrorIfOutputDirDoesNotExist(outputDir); err != nil {
+		log.Fatalf("Output folder does not exist:\n%s", err)
+	}
+
+	return outputDir
+}
+
+func GetBeatmapCountsForUser(user api.User) map[string]uint {
+	return map[string]uint{
+		api.MostPlayed: user.BeatmapPlaycountsCount,
+		api.Favorite:   user.FavoriteBeatmapsetCount,
+		api.Ranked:     user.RankedBeatmapsetCount,
+		api.Loved:      user.LovedBeatmapsetCount,
+		api.Pending:    user.PendingBeatmapsetCount,
+		api.Graveyard:  user.GraveyardBeatmapsetCount,
+		api.Firsts:     user.ScoresFirstCount,
+		api.Best:       user.ScoresBestCount,
+	}
+}
+
 func main() {
 	flags := struct {
 		Help           bool `short:"h" long:"help" description:"Display usage" global:"true"`
@@ -83,6 +106,11 @@ func main() {
 			ClientID     uint   `short:"i" long:"client_id" required:"true" description:"Client ID for the osu! API."`
 			ClientSecret string `short:"s" long:"client_secret" required:"true" description:"Client secret for the osu! API."`
 		} `command:"generate_config" description:"Generate a configuration file for osu! API."`
+		RecursiveFavorites struct {
+			OutputDirectory string `short:"o" long:"output_directory" description:"Optional absolute path to the output folder. All maps will be saved there. Maps will be saved to the '/beatmaps/{target_user}' in the folder from which the program was called if not specified."`
+			RecursionDepth  uint   `short:"d" long:"depth" description:"Optional recursion depth. While it is optional, it is recommended to specify one or else it will run for a very long time. Recommended value is 3."`
+			StartUser       uint   `short:"u" long:"user" required:"true" description:"Required! Numerical ID of the start user."`
+		} `command:"recursive_favorites" description:"Download user's favorites and his favorite maps' authors' favorites and etc until there is none left."`
 		Download struct {
 			OutputDirectory string `short:"o" long:"output_directory" description:"Optional absolute path to the output folder. All maps will be saved there. Maps will be saved to the '/beatmaps/{target_user}' in the folder from which the program was called if not specified."`
 			User            uint   `short:"u" long:"user" required:"true" description:"Required! Numerical ID of the target user."`
@@ -102,6 +130,27 @@ func main() {
 		clientId := flags.GenerateConfig.ClientID
 		clientSecret := flags.GenerateConfig.ClientSecret
 		CreateConfigurationFile(clientId, clientSecret)
+		return nil
+	})
+
+	gocmd.HandleFlag("RecursiveFavorites", func(cmd *gocmd.Cmd, args []string) error {
+		startUserID := flags.RecursiveFavorites.StartUser
+		outputDir := flags.RecursiveFavorites.OutputDirectory
+		recursionDepthLimit := flags.RecursiveFavorites.RecursionDepth
+
+		clientID, clientSecret := GetSecretsFromConfig()
+		client := api.CreateClient(clientID, clientSecret)
+		user := client.GetUser(startUserID)
+		outputDir = CreateFolders(user, outputDir)
+
+		beatmapsetsForUsers := client.GetBeatmapIDsForRecursiveFavorites(user, make(map[api.User]map[uint]api.Beatmapset), 0, recursionDepthLimit)
+		beatmapsetsToDownload := make(map[uint]api.Beatmapset)
+		for _, userBeatmapsets := range beatmapsetsForUsers {
+			for _, beatmapset := range userBeatmapsets {
+				beatmapsetsToDownload[beatmapset.ID] = beatmapset
+			}
+		}
+		client.DownloadMaps(beatmapsetsToDownload, outputDir)
 		return nil
 	})
 
@@ -127,27 +176,14 @@ func main() {
 
 		user := client.GetUser(userID)
 
-		if outputDir == "" {
-			outputDir = CreateDefaultOutputFolders(user.Username)
-		} else if err := ErrorIfOutputDirDoesNotExist(outputDir); err != nil {
-			log.Fatalf("Output folder does not exist:\n%s", err)
-		}
+		outputDir = CreateFolders(user, outputDir)
 
-		beatmapCountMap := map[string]uint{
-			api.MostPlayed: user.BeatmapPlaycountsCount,
-			api.Favorite:   user.FavoriteBeatmapsetCount,
-			api.Ranked:     user.RankedBeatmapsetCount,
-			api.LOVED:      user.LovedBeatmapsetCount,
-			api.Pending:    user.PendingBeatmapsetCount,
-			api.Graveyard:  user.GraveyardBeatmapsetCount,
-			api.Firsts:     user.ScoresFirstCount,
-			api.Best:       user.ScoresBestCount,
-		}
+		beatmapCountMap := GetBeatmapCountsForUser(user)
 		beatmapTypesToGet := map[string]bool{
 			api.MostPlayed: mostPlayed,
 			api.Favorite:   favorite,
 			api.Ranked:     ranked,
-			api.LOVED:      loved,
+			api.Loved:      loved,
 			api.Pending:    pending,
 			api.Graveyard:  graveyard,
 			api.Best:       best,

@@ -2,6 +2,7 @@ package api
 
 type Beatmapset struct {
 	ID     uint   `json:"id"`
+	UserID uint   `json:"user_id"`
 	Artist string `json:"artist"`
 	Title  string `json:"title"`
 }

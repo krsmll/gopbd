@@ -2,22 +2,35 @@
 
 ## osu! User Beatmap Downloader
 
+[About being flagged as virus.](https://go.dev/doc/faq#virus)
+
 ## Installation
+
+There are two ways:
+
+### Precompiled Executable from Releases 
+
+- Download a precompiled executable from Releases.
+- Place it anywhere on your computer.
+- Run the executable using your command-line interface of choice.
+
+
+### Compile Yourself
 
 - Install Go from [the official website](https://go.dev/).
 - Clone this project using [Git](https://git-scm.com/) or download source code directly from Github.
-- Open `cmd` or any other command-line interface in the project directory.
+- Open your command-line interface of choice (e.g. `cmd` for Windows users) in the project directory.
 - Run `go get` to download necessary dependencies.
 - Run `go build` to build an executable file.
-- Place that executable file anywhere on your computer.
+- Place the compiled executable anywhere on your computer.
+
+
+
+You can also add the executable to path, which lets you use the executable from any directory on your computer:
+
 - Add the path to that file in PATH environment
   variable. [Windows tutorial here.](https://stackoverflow.com/questions/44272416/how-to-add-a-folder-to-path-environment-variable-in-windows-10-with-screensho)
 - Restart your command-line interface.
-- Run `goub --help`.
-
-Pre-built executables will be added to Releases when I am absolutely sure it's done.
-
-[About being flagged as virus.](https://go.dev/doc/faq#virus)
 
 ## How to Use
 
@@ -51,7 +64,9 @@ goub download -u 7777875 -r -f -o C:\Users\Kris\AppData\Local\osu!\Songs
 
 `goub --help` for more.
 
+### Recursive Favorites
+
 ## Todo
 
 - ~~Ability to download top plays (im lazy)~~ **Done.**
-- Recursively download user's favorites and the favorite beatmapset's creator's favorite beatmapsets and so on.
+- ~~Recursively download user's favorites and the favorite beatmapset's creator's favorite beatmapsets and so on.~~ **Done.**
