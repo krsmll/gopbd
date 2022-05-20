@@ -17,7 +17,7 @@ oauth_token.json
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-build-exes.sh
+generate-executables.sh
 
 # Go workspace file
 go.work
