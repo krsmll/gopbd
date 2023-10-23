@@ -1,7 +1,6 @@
 package flag
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/devfacet/gocmd/v3"
@@ -62,7 +61,6 @@ func HandleDownload(flags *GoubFlags) func(cmd *gocmd.Cmd, args []string) error 
 			}
 		}
 
-		fmt.Println(user.Username)
 		ch := make(chan int, total)
 		go client.StartGatheringBeatmapsets(ch, userID, beatmapTypesToGet, beatmapCountMap, osu.GamemodeFromString(gameMode))
 		client.Download(ch, outputDir, total)

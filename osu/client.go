@@ -190,7 +190,7 @@ func (c *Client) Download(ch chan int, outputDir string, beatmapsetCount int) {
 			r := regexp.MustCompile("[<>:\"/\\\\|?*]+")
 			rawFileName := fmt.Sprintf("%d.osz", beatmapsetID)
 			fileName := r.ReplaceAllString(rawFileName, "")
-			err = os.WriteFile(outputDir+"/"+fileName, body, 0777)
+			err = os.WriteFile(outputDir+"/"+fileName, body, 0o777)
 			if err != nil {
 				fmt.Printf("%d failed, please download manually.\n", beatmapsetID)
 				log.Fatalln(err)

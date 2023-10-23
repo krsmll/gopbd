@@ -38,12 +38,12 @@ func Create(clientID int, clientSecret string) {
 
 func CreateDefaultOutputFolders(username string) string {
 	if _, err := os.Stat("beatmaps"); os.IsNotExist(err) {
-		os.Mkdir("beatmaps", 0777)
+		os.Mkdir("beatmaps", 0o777)
 	}
 
 	outputDir := "beatmaps/" + username
 	if _, err := os.Stat("beatmaps/" + username); os.IsNotExist(err) {
-		os.Mkdir(outputDir, 0777)
+		os.Mkdir(outputDir, 0o777)
 	}
 
 	return outputDir
